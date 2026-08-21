@@ -10,6 +10,8 @@ The initial CSV adapter retains the latest accepted field values for a VIN. A la
 
 VIN is the cross-source canonical identity. A source record is identified by `source_name + source_record_id + payload_hash`, so one VIN can retain independent dealer and marketplace provenance. Price, mileage, location, and timestamp are observations rather than canonical vehicle fields.
 
+This means canonical identity and provenance deliberately have different cardinality: one row per VIN in `vehicles`, but one historical row per source-record payload version in `vehicle_source_records`. An exact replay adds neither provenance nor observations; a changed dealer payload creates a new dealer provenance version; a marketplace listing creates independent marketplace provenance.
+
 Dealer CSV updates may update canonical descriptive fields for the same source. A later marketplace record only fills canonical nulls; it never overwrites a non-null dealer value. Conflicting raw values remain in provenance.
 
 ```mermaid

@@ -32,6 +32,14 @@ def test_csv_ingestion_lifecycle_against_postgres() -> None:
             accord = await session.scalar(select(Vehicle).where(Vehicle.vin == "1HGCM82633A004352"))
             assert accord is not None
             first_updated_at = accord.updated_at
+            source_count = lambda source=None: select(func.count()).select_from(VehicleSourceRecord).where(
+                VehicleSourceRecord.vehicle_id == accord.id,
+                *([VehicleSourceRecord.source_name == source] if source else []),
+            )
+            observation_count = select(func.count()).select_from(VehiclePriceObservation).where(VehiclePriceObservation.vehicle_id == accord.id)
+            assert await session.scalar(source_count()) == 1
+            assert await session.scalar(source_count("dealer_csv")) == 1
+            assert await session.scalar(observation_count) == 1
 
             replay = await ingest_csv(session, FIXTURES / "dealer_feed_v1.csv")
             assert replay.status == "completed", replay.error_message
@@ -40,6 +48,8 @@ def test_csv_ingestion_lifecycle_against_postgres() -> None:
             assert accord.updated_at == first_updated_at
             assert await session.scalar(select(func.count()).select_from(VehicleSourceRecord)) == 3
             assert await session.scalar(select(func.count()).select_from(VehiclePriceObservation)) == 3
+            assert await session.scalar(source_count()) == 1
+            assert await session.scalar(observation_count) == 1
 
             updated = await ingest_csv(session, FIXTURES / "dealer_feed_v2.csv")
             assert updated.status == "completed", updated.error_message
@@ -52,6 +62,9 @@ def test_csv_ingestion_lifecycle_against_postgres() -> None:
             assert await session.scalar(select(func.count()).select_from(Vehicle)) == 4
             assert await session.scalar(select(func.count()).select_from(VehicleSourceRecord)) == 6
             assert await session.scalar(select(func.count()).select_from(VehiclePriceObservation)) == 6
+            assert await session.scalar(source_count()) == 2
+            assert await session.scalar(source_count("dealer_csv")) == 2
+            assert await session.scalar(observation_count) == 2
 
             invalid = await ingest_csv(session, FIXTURES / "invalid_feed.csv")
             assert invalid.status == "completed", invalid.error_message
@@ -67,6 +80,10 @@ def test_csv_ingestion_lifecycle_against_postgres() -> None:
             assert await session.scalar(select(func.count()).select_from(VehicleSourceRecord)) == 9
             assert await session.scalar(select(func.count()).select_from(VehiclePriceObservation)) == 9
             assert await session.scalar(select(func.count()).select_from(VehicleSourceRecord).where(VehicleSourceRecord.source_name == "marketplace_json", VehicleSourceRecord.source_record_id == "mk-1001")) == 1
+            assert await session.scalar(source_count()) == 3
+            assert await session.scalar(source_count("dealer_csv")) == 2
+            assert await session.scalar(source_count("marketplace_json")) == 1
+            assert await session.scalar(observation_count) == 3
 
             marketplace_replay = await ingest_json(session, FIXTURES / "marketplace_feed.json")
             assert marketplace_replay.status == "completed", marketplace_replay.error_message
@@ -78,8 +95,11 @@ def test_csv_ingestion_lifecycle_against_postgres() -> None:
                 sources = await client.get("/api/v1/vehicles/1HGCM82633A004352/sources")
                 history = await client.get("/api/v1/vehicles/1HGCM82633A004352/price-history")
             assert sources.status_code == 200
-            assert {source["source_name"] for source in sources.json()} == {"dealer_csv", "marketplace_json"}
+            assert len(sources.json()) == 3
+            assert [source["source_name"] for source in sources.json()].count("dealer_csv") == 2
+            assert [source["source_name"] for source in sources.json()].count("marketplace_json") == 1
             assert history.status_code == 200
+            assert len(history.json()) == 3
             assert {observation["source_name"] for observation in history.json()} == {"dealer_csv", "marketplace_json"}
 
     asyncio.run(scenario())
