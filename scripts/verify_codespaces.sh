@@ -10,9 +10,20 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-cleanup() { docker compose down -v --remove-orphans; }
+verified=false
+cleanup() {
+  if [[ "$verified" == true ]]; then
+    docker compose down -v --remove-orphans
+  else
+    echo "Verification failed; Compose services were left running for diagnosis." >&2
+    docker compose ps >&2 || true
+    docker compose logs --no-color >&2 || true
+    echo "Clean up with: docker compose down -v --remove-orphans" >&2
+  fi
+}
 trap cleanup EXIT
 
+docker compose down -v --remove-orphans
 docker compose up -d --build
 
 for _ in $(seq 1 60); do
@@ -64,6 +75,7 @@ curl --fail --silent 'http://localhost:8000/api/v1/vehicles?make=Honda' | assert
 
 docker compose exec -T -e RUN_POSTGRES_INTEGRATION=1 -e PYTHONPATH=. api pytest tests -q
 
+verified=true
 echo 'AUTOSTREAM BASELINE VERIFY SUCCEEDED:'
 echo 'API'
 echo 'PostgreSQL'
