@@ -82,3 +82,17 @@ class IngestionError(Base):
     error_message: Mapped[str] = mapped_column(Text)
     raw_payload: Mapped[dict] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class VehicleEnrichment(Base):
+    __tablename__ = "vehicle_enrichments"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    vehicle_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("vehicles.id", ondelete="CASCADE"), index=True)
+    source_name: Mapped[str] = mapped_column(String(50), default="nhtsa_vpic")
+    status: Mapped[str] = mapped_column(String(20), default="completed")
+    payload_hash: Mapped[str] = mapped_column(String(64))
+    selected_attributes: Mapped[dict] = mapped_column(JSONB, default=dict)
+    raw_payload: Mapped[dict] = mapped_column(JSONB, default=dict)
+    error_message: Mapped[str | None] = mapped_column(Text)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    __table_args__ = (UniqueConstraint("vehicle_id", "source_name", "payload_hash", name="uq_enrichment_payload"),)

@@ -52,3 +52,11 @@ class PriceObservationOut(BaseModel):
     mileage: int | None
     location: str | None
     observed_at: datetime
+
+
+class EnrichmentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    source_name: str
+    status: str
+    selected_attributes: dict
+    fetched_at: datetime
