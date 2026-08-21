@@ -19,6 +19,7 @@ services:
     env_file: .env
     environment:
       FIXTURES_DIR: /app/fixtures
+      NHTSA_FIXTURE_DIR: ${NHTSA_FIXTURE_DIR:-}
     ports: ["8000:8000"]
     depends_on:
       db:

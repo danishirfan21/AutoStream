@@ -3,6 +3,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 [[ -f .env ]] || cp .env.example .env
+export NHTSA_FIXTURE_DIR=/app/fixtures/nhtsa
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "Docker is unavailable in this Codespace." >&2
@@ -128,10 +129,17 @@ api_json 201 -X POST 'http://localhost:8000/api/v1/ingestion/json?fixture=market
 assert_scalar "provenance count after JSON replay" "9" "SELECT count(*) FROM vehicle_source_records;"
 assert_scalar "observation count after JSON replay" "9" "SELECT count(*) FROM vehicle_price_observations;"
 
+api_json 200 -X POST 'http://localhost:8000/api/v1/vehicles/1HGCM82633A004352/enrich/nhtsa' | assert_json "data['source_name']=='nhtsa_vpic' and data['selected_attributes']['BodyClass']=='Sedan/Saloon'"
+assert_scalar "NHTSA enrichment count" "1" "SELECT count(*) FROM vehicle_enrichments;"
+api_json 200 -X POST 'http://localhost:8000/api/v1/vehicles/1HGCM82633A004352/enrich/nhtsa' | assert_json "data['source_name']=='nhtsa_vpic'"
+assert_scalar "NHTSA replay idempotency" "1" "SELECT count(*) FROM vehicle_enrichments;"
+api_json 200 'http://localhost:8000/api/v1/analytics/market-summary' | assert_json "data['total_vehicles']==5 and data['total_source_records']==9 and data['total_price_observations']==9"
+api_json 200 'http://localhost:8000/api/v1/vehicles/1HGCM82633A004352/market-snapshot' | assert_json "data['observation_count']==3 and data['latest_price']==27950"
+
 docker compose exec -T -e RUN_POSTGRES_INTEGRATION=1 -e PYTHONPATH=. api pytest tests -q
 
 verified=true
-echo 'AUTOSTREAM MULTISOURCE VERIFY SUCCEEDED:'
+echo 'AUTOSTREAM INTELLIGENCE VERIFY SUCCEEDED:'
 echo 'API'
 echo 'PostgreSQL'
 echo 'migrations'
@@ -141,8 +149,14 @@ echo 'idempotency'
 echo 'JSON ingestion'
 echo 'VIN deduplication'
 echo 'cross-source provenance'
+echo 'NHTSA enrichment'
+echo 'enrichment conflict handling'
+echo 'enrichment idempotency'
 echo 'conflict handling'
 echo 'price history'
+echo 'latest observation'
+echo 'market analytics'
+echo 'market snapshot'
 echo 'error handling'
 echo 'persistence'
 echo 'tests'

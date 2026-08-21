@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import engine, get_session
 from app.config import get_fixtures_dir
 from app.enrichment import enrich_nhtsa
+from app.analytics import by_make, market_summary, snapshot
 from app.ingestion import ingest_csv, ingest_json
 from app.models import IngestionError, IngestionRun, Vehicle, VehicleEnrichment, VehiclePriceObservation, VehicleSourceRecord
 from app.schemas import EnrichmentOut, ErrorOut, PriceObservationOut, RunOut, SourceRecordOut, VehicleOut
@@ -114,3 +115,25 @@ async def vehicle_enrichment(vin: str, session: AsyncSession = Depends(get_sessi
     if not vehicle:
         raise HTTPException(404, "Vehicle not found")
     return list((await session.scalars(select(VehicleEnrichment).where(VehicleEnrichment.vehicle_id == vehicle.id).order_by(VehicleEnrichment.fetched_at.desc()))).all())
+
+
+@app.get("/api/v1/analytics/market-summary")
+async def analytics_summary(session: AsyncSession = Depends(get_session)) -> dict:
+    return await market_summary(session)
+
+
+@app.get("/api/v1/analytics/by-make")
+async def analytics_by_make(session: AsyncSession = Depends(get_session)) -> list[dict]:
+    return await by_make(session)
+
+
+@app.get("/api/v1/vehicles/{vin}/market-snapshot")
+async def market_snapshot(vin: str, session: AsyncSession = Depends(get_session)) -> dict:
+    result = await snapshot(session, vin)
+    if not result: raise HTTPException(404, "Vehicle not found")
+    return result
+
+
+@app.get("/api/v1/vehicles/{vin}/price-trend", response_model=list[PriceObservationOut])
+async def price_trend(vin: str, session: AsyncSession = Depends(get_session)) -> list[VehiclePriceObservation]:
+    return await price_history(vin, session)
