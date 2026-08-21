@@ -23,9 +23,16 @@ async def by_make(session: AsyncSession) -> list[dict]:
 
 
 async def snapshot(session: AsyncSession, vin: str) -> dict | None:
-    row = (await session.execute(text(f"""WITH ordered AS (SELECT o.*, row_number() OVER (ORDER BY observed_at DESC, id DESC) n FROM vehicle_price_observations o JOIN vehicles v ON v.id=o.vehicle_id WHERE v.vin=:vin), counts AS (SELECT count(*) c FROM ordered)
-      SELECT v.vin,v.year,v.make,v.model,v.trim, a.price latest_price,a.mileage latest_mileage,a.location latest_location,a.observed_at latest_observed_at,b.price previous_price,counts.c observation_count
-      FROM vehicles v LEFT JOIN ordered a ON a.n=1 LEFT JOIN ordered b ON b.n=2 CROSS JOIN counts WHERE v.vin=:vin"""), {"vin": vin.upper()})).mappings().first()
+    row = (await session.execute(text("""WITH ordered AS (
+      SELECT o.*, row_number() OVER (ORDER BY o.observed_at DESC, o.id DESC) AS n
+      FROM vehicle_price_observations AS o JOIN vehicles AS v ON v.id = o.vehicle_id
+      WHERE v.vin = :vin
+    ), counts AS (SELECT count(*) AS c FROM ordered)
+    SELECT v.vin, v.year, v.make, v.model, v.trim,
+      a.price AS latest_price, a.mileage AS latest_mileage, a.location AS latest_location, a.observed_at AS latest_observed_at,
+      b.price AS previous_price, counts.c AS observation_count
+    FROM vehicles AS v LEFT JOIN ordered AS a ON a.n = 1 LEFT JOIN ordered AS b ON b.n = 2 CROSS JOIN counts
+    WHERE v.vin = :vin"""), {"vin": vin.upper()})).mappings().first()
     if not row: return None
     result = dict(row); result["price_change"] = (result["latest_price"] - result["previous_price"]) if result["latest_price"] is not None and result["previous_price"] is not None else None
     result["price_change_percent"] = (float(result["price_change"] / result["previous_price"] * 100) if result["price_change"] is not None and result["previous_price"] else None)

@@ -101,5 +101,11 @@ def test_csv_ingestion_lifecycle_against_postgres() -> None:
             assert history.status_code == 200
             assert len(history.json()) == 3
             assert {observation["source_name"] for observation in history.json()} == {"dealer_csv", "marketplace_json"}
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                market_snapshot = await client.get("/api/v1/vehicles/1HGCM82633A004352/market-snapshot")
+            assert market_snapshot.status_code == 200
+            snapshot = market_snapshot.json()
+            assert (snapshot["vin"], snapshot["latest_price"], snapshot["previous_price"], snapshot["observation_count"]) == ("1HGCM82633A004352", 27950, 27900, 3)
+            assert (snapshot["latest_mileage"], snapshot["latest_location"]) == (12100, "Dallas, TX")
 
     asyncio.run(scenario())
