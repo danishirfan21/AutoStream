@@ -1,4 +1,3 @@
-from pathlib import Path
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException, Query
@@ -6,12 +5,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import engine, get_session
+from app.config import get_settings
 from app.ingestion import ingest_csv
 from app.models import IngestionError, IngestionRun, Vehicle
 from app.schemas import ErrorOut, RunOut, VehicleOut
 
 app = FastAPI(title="AutoStream", version="0.1.0")
-FIXTURES = Path(__file__).resolve().parents[2] / "fixtures"
+FIXTURES = get_settings().fixtures_dir.resolve()
 
 
 @app.get("/health")

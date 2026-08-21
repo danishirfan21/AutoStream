@@ -13,8 +13,12 @@ services:
       retries: 10
     volumes: [postgres_data:/var/lib/postgresql/data]
   api:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     env_file: .env
+    environment:
+      FIXTURES_DIR: /app/fixtures
     ports: ["8000:8000"]
     depends_on:
       db:

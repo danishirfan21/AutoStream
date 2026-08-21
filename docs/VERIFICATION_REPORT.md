@@ -15,7 +15,13 @@ The Codespaces verifier was run through Docker/Compose startup and PostgreSQL he
 
 Root cause: `backend/alembic/env.py` stripped `+asyncpg` from the configured `DATABASE_URL` and used synchronous `engine_from_config`. SQLAlchemy consequently selected its default synchronous PostgreSQL dialect (`psycopg2`) despite the application and Compose configuration using `postgresql+asyncpg://`.
 
-The migration environment now retains the asyncpg URL and uses `async_engine_from_config` with `connection.run_sync(...)`. The unused synchronous `psycopg` dependency was removed. This fix has passed local static/unit checks; the Codespaces rerun is pending. The command is:
+The migration environment now retains the asyncpg URL and uses `async_engine_from_config` with `connection.run_sync(...)`. The unused synchronous `psycopg` dependency was removed.
+
+## Latest Codespaces progress
+
+The latest run confirmed Docker image build, PostgreSQL startup/health, async Alembic migrations (`0001` and `0002`), FastAPI startup, and successful `/health` and `/ready` responses. It then failed with `404 Not Found` for `dealer_feed_v1.csv` because the API image was built from the `backend/` context and did not contain the repository-root `fixtures/` directory.
+
+The API image now builds from repository root, packages the canonical fixture directory at `/app/fixtures`, and receives `FIXTURES_DIR=/app/fixtures`. Local execution retains the repository-root default. The verifier checks fixture presence and reports unexpected HTTP status/bodies before JSON parsing. Codespaces rerun is pending. The command is:
 
 ```bash
 ./scripts/verify_codespaces.sh

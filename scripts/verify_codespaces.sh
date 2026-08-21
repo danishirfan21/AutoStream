@@ -39,35 +39,54 @@ done
 curl --fail --silent http://localhost:8000/health >/dev/null
 curl --fail --silent http://localhost:8000/ready >/dev/null
 docker compose exec -T api alembic upgrade head
+if ! docker compose exec -T api test -f /app/fixtures/dealer_feed_v1.csv; then
+  echo "Expected fixture is missing from the API image: /app/fixtures/dealer_feed_v1.csv" >&2
+  exit 1
+fi
 
 assert_json() {
   local expression="$1"
   python3 -c "import json, sys; data=json.load(sys.stdin); assert ${expression}, data"
 }
+api_json() {
+  local expected_status="$1"
+  shift
+  local response_file status
+  response_file="$(mktemp)"
+  status="$(curl --silent --show-error --output "$response_file" --write-out '%{http_code}' "$@")"
+  if [[ "$status" != "$expected_status" ]]; then
+    echo "API request failed: HTTP $status (expected $expected_status)" >&2
+    cat "$response_file" >&2
+    rm -f "$response_file"
+    return 1
+  fi
+  cat "$response_file"
+  rm -f "$response_file"
+}
 psql_scalar() {
   docker compose exec -T db psql -U autostream -d autostream -Atqc "$1"
 }
 
-curl --fail --silent -X POST 'http://localhost:8000/api/v1/ingestion/csv?fixture=dealer_feed_v1.csv' | assert_json "data['status']=='completed' and data['inserted_records']==3 and data['updated_records']==0 and data['duplicate_records']==0 and data['invalid_records']==0"
+api_json 201 -X POST 'http://localhost:8000/api/v1/ingestion/csv?fixture=dealer_feed_v1.csv' | assert_json "data['status']=='completed' and data['inserted_records']==3 and data['updated_records']==0 and data['duplicate_records']==0 and data['invalid_records']==0"
 [[ "$(psql_scalar 'SELECT count(*) FROM vehicles')" == "3" ]]
 [[ "$(psql_scalar 'SELECT count(*) FROM vehicle_source_records')" == "3" ]]
 [[ "$(psql_scalar 'SELECT count(*) FROM vehicle_price_observations')" == "3" ]]
 accord_before="$(psql_scalar \"SELECT updated_at FROM vehicles WHERE vin = '1HGCM82633A004352'\")"
 
-curl --fail --silent -X POST 'http://localhost:8000/api/v1/ingestion/csv?fixture=dealer_feed_v1.csv' | assert_json "data['inserted_records']==0 and data['updated_records']==0 and data['duplicate_records']==3"
+api_json 201 -X POST 'http://localhost:8000/api/v1/ingestion/csv?fixture=dealer_feed_v1.csv' | assert_json "data['inserted_records']==0 and data['updated_records']==0 and data['duplicate_records']==3"
 [[ "$(psql_scalar 'SELECT count(*) FROM vehicles')" == "3" ]]
 [[ "$(psql_scalar 'SELECT count(*) FROM vehicle_source_records')" == "3" ]]
 [[ "$(psql_scalar 'SELECT count(*) FROM vehicle_price_observations')" == "3" ]]
 [[ "$(psql_scalar \"SELECT updated_at FROM vehicles WHERE vin = '1HGCM82633A004352'\")" == "$accord_before" ]]
 
-curl --fail --silent -X POST 'http://localhost:8000/api/v1/ingestion/csv?fixture=dealer_feed_v2.csv' | assert_json "data['inserted_records']==1 and data['updated_records']==2 and data['duplicate_records']==1 and data['invalid_records']==0"
+api_json 201 -X POST 'http://localhost:8000/api/v1/ingestion/csv?fixture=dealer_feed_v2.csv' | assert_json "data['inserted_records']==1 and data['updated_records']==2 and data['duplicate_records']==1 and data['invalid_records']==0"
 [[ "$(psql_scalar 'SELECT count(*) FROM vehicles')" == "4" ]]
 [[ "$(psql_scalar 'SELECT count(*) FROM vehicle_source_records')" == "6" ]]
 [[ "$(psql_scalar 'SELECT count(*) FROM vehicle_price_observations')" == "6" ]]
 [[ "$(psql_scalar \"SELECT trim FROM vehicles WHERE vin = '5YJ3E1EA7PF123456'\")" == "Long Range AWD" ]]
 [[ "$(psql_scalar \"SELECT updated_at FROM vehicles WHERE vin = '1HGCM82633A004352'\")" == "$accord_before" ]]
 
-invalid_run="$(curl --fail --silent -X POST 'http://localhost:8000/api/v1/ingestion/csv?fixture=invalid_feed.csv')"
+invalid_run="$(api_json 201 -X POST 'http://localhost:8000/api/v1/ingestion/csv?fixture=invalid_feed.csv')"
 printf '%s' "$invalid_run" | assert_json "data['status']=='completed' and data['invalid_records']==2"
 invalid_id="$(printf '%s' "$invalid_run" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")"
 curl --fail --silent "http://localhost:8000/api/v1/ingestion/runs/${invalid_id}/errors" | assert_json "len(data)==2"

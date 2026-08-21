@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 import pytest
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import func, select, text
 
 if os.getenv("RUN_POSTGRES_INTEGRATION") != "1":
@@ -10,6 +11,7 @@ if os.getenv("RUN_POSTGRES_INTEGRATION") != "1":
 
 from app.db import SessionLocal
 from app.ingestion import ingest_csv
+from app.main import app
 from app.models import IngestionError, Vehicle, VehiclePriceObservation, VehicleSourceRecord
 
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures"
@@ -21,8 +23,11 @@ def test_csv_ingestion_lifecycle_against_postgres() -> None:
             await session.execute(text("TRUNCATE ingestion_errors, vehicle_price_observations, vehicle_source_records, ingestion_runs, vehicles CASCADE"))
             await session.commit()
 
-            first = await ingest_csv(session, FIXTURES / "dealer_feed_v1.csv")
-            assert (first.status, first.inserted_records, first.updated_records, first.duplicate_records, first.invalid_records) == ("completed", 3, 0, 0, 0)
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                first_response = await client.post("/api/v1/ingestion/csv?fixture=dealer_feed_v1.csv")
+            assert first_response.status_code == 201
+            first_payload = first_response.json()
+            assert (first_payload["status"], first_payload["inserted_records"], first_payload["updated_records"], first_payload["duplicate_records"], first_payload["invalid_records"]) == ("completed", 3, 0, 0, 0)
             accord = await session.scalar(select(Vehicle).where(Vehicle.vin == "1HGCM82633A004352"))
             assert accord is not None
             first_updated_at = accord.updated_at
