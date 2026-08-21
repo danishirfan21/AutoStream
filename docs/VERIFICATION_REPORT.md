@@ -43,6 +43,8 @@ The intelligence verifier then proved deterministic NHTSA enrichment/replay and 
 
 Commit `068bf10` fixed that SQL ambiguity and the following Codespaces run returned the expected deterministic market snapshot. The remaining verifier-only failure compared Decimal-backed monetary JSON strings (for example `"27950.00"`) to an integer. The verifier now uses `Decimal` for monetary assertions and tolerance for the percentage calculation; rerun pending.
 
+The next run reached the PostgreSQL integration suite, where its snapshot test still made the same stale integer assumption. It now uses `Decimal` for exact money and `pytest.approx` for percentage change; rerun pending.
+
 That script starts the Compose stack, applies Alembic migrations through the API startup, verifies v1, exact replay, v2, persisted row counts, timestamp semantics, invalid-row error persistence, API lookup, and the PostgreSQL integration test. It exits non-zero for any failed assertion.
 
 ## Expected deterministic counts (not yet a claimed run result)

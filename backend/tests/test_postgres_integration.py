@@ -1,5 +1,6 @@
 import asyncio
 import os
+from decimal import Decimal
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -105,7 +106,12 @@ def test_csv_ingestion_lifecycle_against_postgres() -> None:
                 market_snapshot = await client.get("/api/v1/vehicles/1HGCM82633A004352/market-snapshot")
             assert market_snapshot.status_code == 200
             snapshot = market_snapshot.json()
-            assert (snapshot["vin"], snapshot["latest_price"], snapshot["previous_price"], snapshot["observation_count"]) == ("1HGCM82633A004352", 27950, 27900, 3)
+            assert snapshot["vin"] == "1HGCM82633A004352"
+            assert Decimal(snapshot["latest_price"]) == Decimal("27950.00")
+            assert Decimal(snapshot["previous_price"]) == Decimal("27900.00")
+            assert Decimal(snapshot["price_change"]) == Decimal("50.00")
+            assert snapshot["observation_count"] == 3
+            assert snapshot["price_change_percent"] == pytest.approx(0.179211469534, rel=1e-9)
             assert (snapshot["latest_mileage"], snapshot["latest_location"]) == (12100, "Dallas, TX")
 
     asyncio.run(scenario())
