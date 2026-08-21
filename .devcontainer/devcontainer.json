@@ -1,10 +1,17 @@
 {
   "name": "AutoStream",
-  "image": "mcr.microsoft.com/devcontainers/python:1-3.11-bookworm",
+  "image": "mcr.microsoft.com/devcontainers/base:debian-12",
   "privileged": true,
   "features": {
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11"
+    },
     "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
+  "overrideFeatureInstallOrder": [
+    "ghcr.io/devcontainers/features/docker-in-docker:2",
+    "ghcr.io/devcontainers/features/python:1"
+  ],
   "forwardPorts": [8000, 5432],
   "postCreateCommand": "python -m pip install -r backend/requirements.txt"
 }
