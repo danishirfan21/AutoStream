@@ -5,13 +5,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import engine, get_session
-from app.config import get_settings
+from app.config import get_fixtures_dir
 from app.ingestion import ingest_csv
 from app.models import IngestionError, IngestionRun, Vehicle
 from app.schemas import ErrorOut, RunOut, VehicleOut
 
 app = FastAPI(title="AutoStream", version="0.1.0")
-FIXTURES = get_settings().fixtures_dir.resolve()
+FIXTURES = get_fixtures_dir()
 
 
 @app.get("/health")

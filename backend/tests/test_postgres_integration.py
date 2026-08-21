@@ -1,6 +1,5 @@
 import asyncio
 import os
-from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -10,15 +9,17 @@ if os.getenv("RUN_POSTGRES_INTEGRATION") != "1":
     pytest.skip("set RUN_POSTGRES_INTEGRATION=1 to run against PostgreSQL", allow_module_level=True)
 
 from app.db import SessionLocal
+from app.config import get_fixtures_dir
 from app.ingestion import ingest_csv
 from app.main import app
 from app.models import IngestionError, Vehicle, VehiclePriceObservation, VehicleSourceRecord
 
-FIXTURES = Path(__file__).resolve().parents[2] / "fixtures"
+FIXTURES = get_fixtures_dir()
 
 
 def test_csv_ingestion_lifecycle_against_postgres() -> None:
     async def scenario() -> None:
+        assert (FIXTURES / "dealer_feed_v1.csv").is_file(), f"Fixture is unavailable: {FIXTURES / 'dealer_feed_v1.csv'}"
         async with SessionLocal() as session:
             await session.execute(text("TRUNCATE ingestion_errors, vehicle_price_observations, vehicle_source_records, ingestion_runs, vehicles CASCADE"))
             await session.commit()
@@ -33,6 +34,7 @@ def test_csv_ingestion_lifecycle_against_postgres() -> None:
             first_updated_at = accord.updated_at
 
             replay = await ingest_csv(session, FIXTURES / "dealer_feed_v1.csv")
+            assert replay.status == "completed", replay.error_message
             assert (replay.inserted_records, replay.updated_records, replay.duplicate_records) == (0, 0, 3)
             await session.refresh(accord)
             assert accord.updated_at == first_updated_at
@@ -40,6 +42,7 @@ def test_csv_ingestion_lifecycle_against_postgres() -> None:
             assert await session.scalar(select(func.count()).select_from(VehiclePriceObservation)) == 3
 
             updated = await ingest_csv(session, FIXTURES / "dealer_feed_v2.csv")
+            assert updated.status == "completed", updated.error_message
             assert (updated.inserted_records, updated.updated_records, updated.duplicate_records, updated.invalid_records) == (1, 2, 1, 0)
             await session.refresh(accord)
             assert accord.updated_at == first_updated_at  # price/mileage are observations, not canonical fields
@@ -51,6 +54,7 @@ def test_csv_ingestion_lifecycle_against_postgres() -> None:
             assert await session.scalar(select(func.count()).select_from(VehiclePriceObservation)) == 6
 
             invalid = await ingest_csv(session, FIXTURES / "invalid_feed.csv")
+            assert invalid.status == "completed", invalid.error_message
             assert (invalid.status, invalid.invalid_records) == ("completed", 2)
             assert await session.scalar(select(func.count()).select_from(IngestionError).where(IngestionError.ingestion_run_id == invalid.id)) == 2
 

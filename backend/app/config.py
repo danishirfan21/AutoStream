@@ -14,3 +14,7 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def get_fixtures_dir() -> Path:
+    return get_settings().fixtures_dir.resolve()
