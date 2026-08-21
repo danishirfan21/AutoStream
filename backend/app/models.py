@@ -13,7 +13,7 @@ class Base(DeclarativeBase):
 class Vehicle(Base):
     __tablename__ = "vehicles"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    vin: Mapped[str] = mapped_column(String(17), unique=True, index=True)
+    vin: Mapped[str] = mapped_column(String(17), unique=True)
     year: Mapped[int | None] = mapped_column(Integer)
     make: Mapped[str | None] = mapped_column(String(80))
     model: Mapped[str | None] = mapped_column(String(80))
