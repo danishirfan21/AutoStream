@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.adapters import CsvFeedAdapter
+from app.adapters import CsvFeedAdapter, MarketplaceJsonAdapter, VehicleSourceAdapter
 from app.models import IngestionError, IngestionRun, Vehicle, VehiclePriceObservation, VehicleSourceRecord
 
 
@@ -16,8 +16,7 @@ def payload_hash(payload: dict) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-async def ingest_csv(session: AsyncSession, path: Path) -> IngestionRun:
-    adapter = CsvFeedAdapter()
+async def ingest_feed(session: AsyncSession, adapter: VehicleSourceAdapter, path: Path) -> IngestionRun:
     run = IngestionRun(source_name=adapter.source_name, status="running")
     session.add(run)
     await session.flush()
@@ -29,7 +28,7 @@ async def ingest_csv(session: AsyncSession, path: Path) -> IngestionRun:
             source_id = raw.get("vin") or f"row-{run.total_records}"
             try:
                 record = adapter.normalize_record(raw)
-                source_id = record.vin
+                source_id = adapter.source_record_id(raw, record)
                 digest = payload_hash(raw)
                 async with session.begin_nested():
                     existing_source = await session.scalar(select(VehicleSourceRecord.id).where(
@@ -48,7 +47,10 @@ async def ingest_csv(session: AsyncSession, path: Path) -> IngestionRun:
                         run.inserted_records += 1
                     else:
                         vehicle_id = vehicle.id
-                        changes = {key: value for key, value in canonical.items() if getattr(vehicle, key) != value}
+                        if adapter.can_update_canonical:
+                            changes = {key: value for key, value in canonical.items() if getattr(vehicle, key) != value}
+                        else:
+                            changes = {key: value for key, value in canonical.items() if getattr(vehicle, key) is None}
                         if changes:
                             changes["updated_at"] = func.now()
                             await session.execute(Vehicle.__table__.update().where(Vehicle.id == vehicle_id).values(**changes))
@@ -88,3 +90,11 @@ async def ingest_csv(session: AsyncSession, path: Path) -> IngestionRun:
     await session.commit()
     await session.refresh(run)
     return run
+
+
+async def ingest_csv(session: AsyncSession, path: Path) -> IngestionRun:
+    return await ingest_feed(session, CsvFeedAdapter(), path)
+
+
+async def ingest_json(session: AsyncSession, path: Path) -> IngestionRun:
+    return await ingest_feed(session, MarketplaceJsonAdapter(), path)

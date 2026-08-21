@@ -10,7 +10,7 @@ if os.getenv("RUN_POSTGRES_INTEGRATION") != "1":
 
 from app.db import SessionLocal
 from app.config import get_fixtures_dir
-from app.ingestion import ingest_csv
+from app.ingestion import ingest_csv, ingest_json
 from app.main import app
 from app.models import IngestionError, Vehicle, VehiclePriceObservation, VehicleSourceRecord
 
@@ -57,5 +57,29 @@ def test_csv_ingestion_lifecycle_against_postgres() -> None:
             assert invalid.status == "completed", invalid.error_message
             assert (invalid.status, invalid.invalid_records) == ("completed", 2)
             assert await session.scalar(select(func.count()).select_from(IngestionError).where(IngestionError.ingestion_run_id == invalid.id)) == 2
+
+            marketplace = await ingest_json(session, FIXTURES / "marketplace_feed.json")
+            assert marketplace.status == "completed", marketplace.error_message
+            assert (marketplace.inserted_records, marketplace.updated_records, marketplace.duplicate_records, marketplace.invalid_records) == (1, 2, 0, 1)
+            accord = await session.scalar(select(Vehicle).where(Vehicle.vin == "1HGCM82633A004352"))
+            assert accord.trim == "EX"  # marketplace EX-L conflict cannot overwrite dealer canonical data
+            assert await session.scalar(select(func.count()).select_from(Vehicle)) == 5
+            assert await session.scalar(select(func.count()).select_from(VehicleSourceRecord)) == 9
+            assert await session.scalar(select(func.count()).select_from(VehiclePriceObservation)) == 9
+            assert await session.scalar(select(func.count()).select_from(VehicleSourceRecord).where(VehicleSourceRecord.source_name == "marketplace_json", VehicleSourceRecord.source_record_id == "mk-1001")) == 1
+
+            marketplace_replay = await ingest_json(session, FIXTURES / "marketplace_feed.json")
+            assert marketplace_replay.status == "completed", marketplace_replay.error_message
+            assert (marketplace_replay.inserted_records, marketplace_replay.updated_records, marketplace_replay.duplicate_records, marketplace_replay.invalid_records) == (0, 0, 3, 1)
+            assert await session.scalar(select(func.count()).select_from(VehicleSourceRecord)) == 9
+            assert await session.scalar(select(func.count()).select_from(VehiclePriceObservation)) == 9
+
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                sources = await client.get("/api/v1/vehicles/1HGCM82633A004352/sources")
+                history = await client.get("/api/v1/vehicles/1HGCM82633A004352/price-history")
+            assert sources.status_code == 200
+            assert {source["source_name"] for source in sources.json()} == {"dealer_csv", "marketplace_json"}
+            assert history.status_code == 200
+            assert {observation["source_name"] for observation in history.json()} == {"dealer_csv", "marketplace_json"}
 
     asyncio.run(scenario())

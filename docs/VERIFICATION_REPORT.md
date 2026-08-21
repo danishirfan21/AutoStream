@@ -29,6 +29,14 @@ That corrected verifier then reached all live API checks: v1 ingestion, exact re
 ./scripts/verify_codespaces.sh
 ```
 
+## Verified CSV baseline
+
+The Codespaces verifier completed the CSV baseline successfully: Docker/Compose, PostgreSQL, async Alembic migrations, FastAPI health/readiness, deterministic CSV imports, exact replay, incremental update, persistence, error handling, and PostgreSQL integration tests.
+
+## Multi-source status
+
+The next verifier revision adds `marketplace_feed.json`: three valid listings (two VINs overlapping CSV and one new VIN) plus one invalid VIN. It verifies VIN-level deduplication, independent `marketplace_json` provenance using listing IDs, source observation history, the non-overwrite cross-source conflict rule, and JSON replay. This multi-source verifier has not yet been run in Codespaces.
+
 That script starts the Compose stack, applies Alembic migrations through the API startup, verifies v1, exact replay, v2, persisted row counts, timestamp semantics, invalid-row error persistence, API lookup, and the PostgreSQL integration test. It exits non-zero for any failed assertion.
 
 ## Expected deterministic counts (not yet a claimed run result)

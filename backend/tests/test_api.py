@@ -16,3 +16,5 @@ def test_unknown_or_unsafe_fixture_is_rejected() -> None:
     with TestClient(app) as client:
         assert client.post("/api/v1/ingestion/csv?fixture=missing.csv").status_code == 404
         assert client.post("/api/v1/ingestion/csv?fixture=../.env").status_code == 404
+        assert client.post("/api/v1/ingestion/json?fixture=missing.json").status_code == 404
+        assert client.post("/api/v1/ingestion/json?fixture=../.env").status_code == 404

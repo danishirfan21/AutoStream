@@ -6,9 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import engine, get_session
 from app.config import get_fixtures_dir
-from app.ingestion import ingest_csv
-from app.models import IngestionError, IngestionRun, Vehicle
-from app.schemas import ErrorOut, RunOut, VehicleOut
+from app.ingestion import ingest_csv, ingest_json
+from app.models import IngestionError, IngestionRun, Vehicle, VehiclePriceObservation, VehicleSourceRecord
+from app.schemas import ErrorOut, PriceObservationOut, RunOut, SourceRecordOut, VehicleOut
 
 app = FastAPI(title="AutoStream", version="0.1.0")
 FIXTURES = get_fixtures_dir()
@@ -32,6 +32,14 @@ async def import_csv(fixture: str = "dealer_feed_v1.csv", session: AsyncSession 
     if FIXTURES not in path.parents or not path.is_file() or path.suffix.lower() != ".csv":
         raise HTTPException(404, "CSV fixture not found")
     return await ingest_csv(session, path)
+
+
+@app.post("/api/v1/ingestion/json", response_model=RunOut, status_code=201)
+async def import_json(fixture: str = "marketplace_feed.json", session: AsyncSession = Depends(get_session)) -> IngestionRun:
+    path = (FIXTURES / fixture).resolve()
+    if FIXTURES not in path.parents or not path.is_file() or path.suffix.lower() != ".json":
+        raise HTTPException(404, "JSON fixture not found")
+    return await ingest_json(session, path)
 
 
 @app.get("/api/v1/ingestion/runs", response_model=list[RunOut])
@@ -69,3 +77,21 @@ async def get_vehicle(vin: str, session: AsyncSession = Depends(get_session)) ->
     if not vehicle:
         raise HTTPException(404, "Vehicle not found")
     return vehicle
+
+
+@app.get("/api/v1/vehicles/{vin}/sources", response_model=list[SourceRecordOut])
+async def vehicle_sources(vin: str, session: AsyncSession = Depends(get_session)) -> list[VehicleSourceRecord]:
+    vehicle = await session.scalar(select(Vehicle).where(Vehicle.vin == vin.upper()))
+    if not vehicle:
+        raise HTTPException(404, "Vehicle not found")
+    stmt = select(VehicleSourceRecord).where(VehicleSourceRecord.vehicle_id == vehicle.id).order_by(VehicleSourceRecord.ingested_at)
+    return list((await session.scalars(stmt)).all())
+
+
+@app.get("/api/v1/vehicles/{vin}/price-history", response_model=list[PriceObservationOut])
+async def price_history(vin: str, session: AsyncSession = Depends(get_session)) -> list[VehiclePriceObservation]:
+    vehicle = await session.scalar(select(Vehicle).where(Vehicle.vin == vin.upper()))
+    if not vehicle:
+        raise HTTPException(404, "Vehicle not found")
+    stmt = select(VehiclePriceObservation).where(VehiclePriceObservation.vehicle_id == vehicle.id).order_by(VehiclePriceObservation.observed_at)
+    return list((await session.scalars(stmt)).all())

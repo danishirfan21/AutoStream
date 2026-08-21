@@ -1,3 +1,6 @@
 [
-  {"vehicle_id": "mp-100", "vin_number": "1HGCM82633A004352", "manufacturer": "Honda", "model_name": "Accord", "model_year": 2023, "asking_price": 28100}
+  {"listing_id": "mk-1001", "vehicle_vin": "1HGCM82633A004352", "model_year": 2023, "brand": "Honda", "vehicle_model": "Accord", "variant": "EX-L", "asking_price": 27950, "odometer_miles": 12100, "market": "Dallas, TX", "updated": "2026-08-01T10:30:00Z"},
+  {"listing_id": "mk-1002", "vehicle_vin": "1FTFW1E50PFA12345", "model_year": 2023, "brand": "Ford", "vehicle_model": "F-150", "variant": "XLT", "asking_price": 40800, "odometer_miles": 18100, "market": "Fort Worth, TX", "updated": "2026-08-01T10:45:00Z"},
+  {"listing_id": "mk-1003", "vehicle_vin": "1N4AL3AP9JC123456", "model_year": 2018, "brand": "Nissan", "vehicle_model": "Altima", "variant": "S", "asking_price": 13800, "odometer_miles": 45200, "market": "Dallas, TX", "updated": "2026-08-01T11:00:00Z"},
+  {"listing_id": "mk-invalid", "vehicle_vin": "BADVIN", "model_year": 2024, "brand": "Invalid", "vehicle_model": "Example", "variant": "Base", "asking_price": 10000, "odometer_miles": 100, "market": "Nowhere", "updated": "2026-08-01T11:15:00Z"}
 ]

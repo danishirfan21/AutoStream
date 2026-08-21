@@ -35,3 +35,20 @@ class ErrorOut(BaseModel):
     error_type: str
     error_message: str
     created_at: datetime
+
+
+class SourceRecordOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    source_name: str
+    source_record_id: str
+    source_timestamp: datetime | None
+    ingested_at: datetime
+
+
+class PriceObservationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    source_name: str
+    price: float | None
+    mileage: int | None
+    location: str | None
+    observed_at: datetime

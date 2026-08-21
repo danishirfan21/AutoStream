@@ -15,6 +15,10 @@ AutoStream is a vehicle-data ingestion and market-intelligence portfolio project
 - Exact-replay and incremental semantics are covered by a PostgreSQL-only integration test, enabled with `RUN_POSTGRES_INTEGRATION=1`.
 - JSON/NHTSA adapters, caching, market analytics, load testing, and a frontend are intentionally deferred.
 
+## Multi-source ingestion
+
+AutoStream also ingests a deterministic marketplace JSON feed with source-specific listing IDs. VIN remains the canonical identity across feeds; provenance and price observations remain independent. Marketplace conflicts do not overwrite existing non-null dealer canonical fields.
+
 ## Run
 
 ```powershell

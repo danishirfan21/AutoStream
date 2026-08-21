@@ -43,6 +43,10 @@ if ! docker compose exec -T api test -f /app/fixtures/dealer_feed_v1.csv; then
   echo "Expected fixture is missing from the API image: /app/fixtures/dealer_feed_v1.csv" >&2
   exit 1
 fi
+if ! docker compose exec -T api test -f /app/fixtures/marketplace_feed.json; then
+  echo "Expected fixture is missing from the API image: /app/fixtures/marketplace_feed.json" >&2
+  exit 1
+fi
 
 assert_json() {
   local expression="$1"
@@ -107,18 +111,34 @@ invalid_id="$(printf '%s' "$invalid_run" | python3 -c "import json,sys; print(js
 curl --fail --silent "http://localhost:8000/api/v1/ingestion/runs/${invalid_id}/errors" | assert_json "len(data)==2"
 curl --fail --silent 'http://localhost:8000/api/v1/vehicles?make=Honda' | assert_json "len(data)==1 and data[0]['vin']=='1HGCM82633A004352'"
 
+api_json 201 -X POST 'http://localhost:8000/api/v1/ingestion/json?fixture=marketplace_feed.json' | assert_json "data['source_name']=='marketplace_json' and data['inserted_records']==1 and data['updated_records']==2 and data['duplicate_records']==0 and data['invalid_records']==1"
+assert_scalar "canonical vehicle count after JSON" "5" "SELECT count(*) FROM vehicles;"
+assert_scalar "provenance count after JSON" "9" "SELECT count(*) FROM vehicle_source_records;"
+assert_scalar "observation count after JSON" "9" "SELECT count(*) FROM vehicle_price_observations;"
+assert_scalar "shared VIN provenance count" "2" "SELECT count(*) FROM vehicle_source_records s JOIN vehicles v ON v.id = s.vehicle_id WHERE v.vin = '1HGCM82633A004352';"
+assert_scalar "JSON source record identity" "1" "SELECT count(*) FROM vehicle_source_records WHERE source_name = 'marketplace_json' AND source_record_id = 'mk-1001';"
+assert_scalar "cross-source conflict rule" "EX" "SELECT trim FROM vehicles WHERE vin = '1HGCM82633A004352';"
+api_json 200 'http://localhost:8000/api/v1/vehicles/1HGCM82633A004352/sources' | assert_json "{item['source_name'] for item in data} == {'dealer_csv', 'marketplace_json'}"
+api_json 200 'http://localhost:8000/api/v1/vehicles/1HGCM82633A004352/price-history' | assert_json "{item['source_name'] for item in data} == {'dealer_csv', 'marketplace_json'}"
+api_json 201 -X POST 'http://localhost:8000/api/v1/ingestion/json?fixture=marketplace_feed.json' | assert_json "data['inserted_records']==0 and data['updated_records']==0 and data['duplicate_records']==3 and data['invalid_records']==1"
+assert_scalar "provenance count after JSON replay" "9" "SELECT count(*) FROM vehicle_source_records;"
+assert_scalar "observation count after JSON replay" "9" "SELECT count(*) FROM vehicle_price_observations;"
+
 docker compose exec -T -e RUN_POSTGRES_INTEGRATION=1 -e PYTHONPATH=. api pytest tests -q
 
 verified=true
-echo 'AUTOSTREAM BASELINE VERIFY SUCCEEDED:'
+echo 'AUTOSTREAM MULTISOURCE VERIFY SUCCEEDED:'
 echo 'API'
 echo 'PostgreSQL'
 echo 'migrations'
 echo 'CSV ingestion'
 echo 'normalization'
 echo 'idempotency'
-echo 'incremental update'
-echo 'provenance'
+echo 'JSON ingestion'
+echo 'VIN deduplication'
+echo 'cross-source provenance'
+echo 'conflict handling'
+echo 'price history'
 echo 'error handling'
 echo 'persistence'
 echo 'tests'
