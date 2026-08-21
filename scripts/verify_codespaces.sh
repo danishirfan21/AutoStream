@@ -134,7 +134,7 @@ assert_scalar "NHTSA enrichment count" "1" "SELECT count(*) FROM vehicle_enrichm
 api_json 200 -X POST 'http://localhost:8000/api/v1/vehicles/1HGCM82633A004352/enrich/nhtsa' | assert_json "data['source_name']=='nhtsa_vpic'"
 assert_scalar "NHTSA replay idempotency" "1" "SELECT count(*) FROM vehicle_enrichments;"
 api_json 200 'http://localhost:8000/api/v1/analytics/market-summary' | assert_json "data['total_vehicles']==5 and data['total_source_records']==9 and data['total_price_observations']==9"
-api_json 200 'http://localhost:8000/api/v1/vehicles/1HGCM82633A004352/market-snapshot' | assert_json "data['observation_count']==3 and data['latest_price']==27950"
+api_json 200 'http://localhost:8000/api/v1/vehicles/1HGCM82633A004352/market-snapshot' | python3 -c "import json, sys; from decimal import Decimal; data=json.load(sys.stdin); assert data['vin']=='1HGCM82633A004352' and data['observation_count']==3 and Decimal(data['latest_price'])==Decimal('27950.00') and Decimal(data['previous_price'])==Decimal('27900.00') and data['latest_mileage']==12100 and data['latest_location']=='Dallas, TX' and Decimal(data['price_change'])==Decimal('50.00') and abs(data['price_change_percent']-0.17921146953405018)<1e-12, data"
 
 docker compose exec -T -e RUN_POSTGRES_INTEGRATION=1 -e PYTHONPATH=. api pytest tests -q
 

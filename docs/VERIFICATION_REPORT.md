@@ -41,6 +41,8 @@ The first multi-source rerun reached JSON ingestion and proved the shared Honda 
 
 The intelligence verifier then proved deterministic NHTSA enrichment/replay and market summary, but failed at market snapshot because the joined query used ambiguous `ORDER BY observed_at DESC, id DESC`. The query now qualifies the intended deterministic ordering as `o.observed_at DESC, o.id DESC`; a Codespaces rerun is pending.
 
+Commit `068bf10` fixed that SQL ambiguity and the following Codespaces run returned the expected deterministic market snapshot. The remaining verifier-only failure compared Decimal-backed monetary JSON strings (for example `"27950.00"`) to an integer. The verifier now uses `Decimal` for monetary assertions and tolerance for the percentage calculation; rerun pending.
+
 That script starts the Compose stack, applies Alembic migrations through the API startup, verifies v1, exact replay, v2, persisted row counts, timestamp semantics, invalid-row error persistence, API lookup, and the PostgreSQL integration test. It exits non-zero for any failed assertion.
 
 ## Expected deterministic counts (not yet a claimed run result)
