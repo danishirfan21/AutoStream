@@ -11,7 +11,11 @@ Current local result: `5 passed, 1 skipped`. The skipped test is intentionally P
 
 ## Codespaces / PostgreSQL status
 
-Not run in this environment: Docker is not installed, so neither Docker Compose nor a PostgreSQL server was available. The actual end-to-end command is:
+The Codespaces verifier was run through Docker/Compose startup and PostgreSQL health, but the API failed during Alembic startup with `ModuleNotFoundError: No module named 'psycopg2'`.
+
+Root cause: `backend/alembic/env.py` stripped `+asyncpg` from the configured `DATABASE_URL` and used synchronous `engine_from_config`. SQLAlchemy consequently selected its default synchronous PostgreSQL dialect (`psycopg2`) despite the application and Compose configuration using `postgresql+asyncpg://`.
+
+The migration environment now retains the asyncpg URL and uses `async_engine_from_config` with `connection.run_sync(...)`. The unused synchronous `psycopg` dependency was removed. This fix has passed local static/unit checks; the Codespaces rerun is pending. The command is:
 
 ```bash
 ./scripts/verify_codespaces.sh
