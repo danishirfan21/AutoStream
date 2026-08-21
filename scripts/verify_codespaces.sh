@@ -4,6 +4,12 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 [[ -f .env ]] || cp .env.example .env
 
+if ! command -v docker >/dev/null 2>&1; then
+  echo "Docker is unavailable in this Codespace." >&2
+  echo "Run 'Codespaces: Rebuild Container' to apply .devcontainer/devcontainer.json, then retry." >&2
+  exit 1
+fi
+
 cleanup() { docker compose down -v --remove-orphans; }
 trap cleanup EXIT
 
