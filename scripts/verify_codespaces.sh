@@ -64,27 +64,42 @@ api_json() {
   rm -f "$response_file"
 }
 psql_scalar() {
-  docker compose exec -T db psql -U autostream -d autostream -Atqc "$1"
+  docker compose exec -T db psql -U "${POSTGRES_USER:-autostream}" -d "${POSTGRES_DB:-autostream}" \
+    -v ON_ERROR_STOP=1 -tA -c "$1"
+}
+assert_scalar() {
+  local name="$1"
+  local expected="$2"
+  local sql="$3"
+  local actual
+  actual="$(psql_scalar "$sql")"
+  actual="${actual//$'\r'/}"
+  if [[ "$actual" != "$expected" ]]; then
+    echo "ASSERT FAILED: $name" >&2
+    echo "expected: $expected" >&2
+    echo "actual: $actual" >&2
+    return 1
+  fi
 }
 
 api_json 201 -X POST 'http://localhost:8000/api/v1/ingestion/csv?fixture=dealer_feed_v1.csv' | assert_json "data['status']=='completed' and data['inserted_records']==3 and data['updated_records']==0 and data['duplicate_records']==0 and data['invalid_records']==0"
-[[ "$(psql_scalar 'SELECT count(*) FROM vehicles')" == "3" ]]
-[[ "$(psql_scalar 'SELECT count(*) FROM vehicle_source_records')" == "3" ]]
-[[ "$(psql_scalar 'SELECT count(*) FROM vehicle_price_observations')" == "3" ]]
-accord_before="$(psql_scalar \"SELECT updated_at FROM vehicles WHERE vin = '1HGCM82633A004352'\")"
+assert_scalar "vehicle count after v1" "3" "SELECT count(*) FROM vehicles;"
+assert_scalar "provenance count after v1" "3" "SELECT count(*) FROM vehicle_source_records;"
+assert_scalar "observation count after v1" "3" "SELECT count(*) FROM vehicle_price_observations;"
+accord_before="$(psql_scalar "SELECT updated_at FROM vehicles WHERE vin = '1HGCM82633A004352';")"
 
 api_json 201 -X POST 'http://localhost:8000/api/v1/ingestion/csv?fixture=dealer_feed_v1.csv' | assert_json "data['inserted_records']==0 and data['updated_records']==0 and data['duplicate_records']==3"
-[[ "$(psql_scalar 'SELECT count(*) FROM vehicles')" == "3" ]]
-[[ "$(psql_scalar 'SELECT count(*) FROM vehicle_source_records')" == "3" ]]
-[[ "$(psql_scalar 'SELECT count(*) FROM vehicle_price_observations')" == "3" ]]
-[[ "$(psql_scalar \"SELECT updated_at FROM vehicles WHERE vin = '1HGCM82633A004352'\")" == "$accord_before" ]]
+assert_scalar "vehicle count after replay" "3" "SELECT count(*) FROM vehicles;"
+assert_scalar "provenance count after replay" "3" "SELECT count(*) FROM vehicle_source_records;"
+assert_scalar "observation count after replay" "3" "SELECT count(*) FROM vehicle_price_observations;"
+assert_scalar "Accord updated_at after replay" "$accord_before" "SELECT updated_at FROM vehicles WHERE vin = '1HGCM82633A004352';"
 
 api_json 201 -X POST 'http://localhost:8000/api/v1/ingestion/csv?fixture=dealer_feed_v2.csv' | assert_json "data['inserted_records']==1 and data['updated_records']==2 and data['duplicate_records']==1 and data['invalid_records']==0"
-[[ "$(psql_scalar 'SELECT count(*) FROM vehicles')" == "4" ]]
-[[ "$(psql_scalar 'SELECT count(*) FROM vehicle_source_records')" == "6" ]]
-[[ "$(psql_scalar 'SELECT count(*) FROM vehicle_price_observations')" == "6" ]]
-[[ "$(psql_scalar \"SELECT trim FROM vehicles WHERE vin = '5YJ3E1EA7PF123456'\")" == "Long Range AWD" ]]
-[[ "$(psql_scalar \"SELECT updated_at FROM vehicles WHERE vin = '1HGCM82633A004352'\")" == "$accord_before" ]]
+assert_scalar "vehicle count after v2" "4" "SELECT count(*) FROM vehicles;"
+assert_scalar "provenance count after v2" "6" "SELECT count(*) FROM vehicle_source_records;"
+assert_scalar "observation count after v2" "6" "SELECT count(*) FROM vehicle_price_observations;"
+assert_scalar "Tesla canonical trim" "Long Range AWD" "SELECT trim FROM vehicles WHERE vin = '5YJ3E1EA7PF123456';"
+assert_scalar "Accord updated_at after price update" "$accord_before" "SELECT updated_at FROM vehicles WHERE vin = '1HGCM82633A004352';"
 
 invalid_run="$(api_json 201 -X POST 'http://localhost:8000/api/v1/ingestion/csv?fixture=invalid_feed.csv')"
 printf '%s' "$invalid_run" | assert_json "data['status']=='completed' and data['invalid_records']==2"
