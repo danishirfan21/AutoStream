@@ -22,7 +22,7 @@ async def main() -> None:
         for i in range(args.vehicles):
             make = tuple(MAKES)[i % len(MAKES)]; model = MAKES[make][i % 2]; vehicle_id = uuid.uuid5(NAMESPACE, f"vehicle-{i}")
             vin = f"B{i:016d}"[-17:]; vehicles.append((vehicle_id, vin, 2012 + i % 14, make, model, "Synthetic"))
-            for version in range(1 + (i % 3)):
+            for version in range(3):
                 source = SOURCES[version % len(SOURCES)]; stamp = now - timedelta(days=version * 30)
                 sources.append((uuid.uuid5(NAMESPACE, f"source-{i}-{version}"), vehicle_id, source, f"{source}-{i}-{version}", json.dumps({"synthetic": True, "version": version}), stamp, stamp, f"{i:064x}"))
             for n in range(1 + (i % 12)):
