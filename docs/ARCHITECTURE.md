@@ -2,9 +2,9 @@
 
 PostgreSQL is authoritative. `vehicles` holds one canonical record per VIN, while `vehicle_source_records` preserves every accepted source payload and `vehicle_price_observations` keeps price history rather than overwriting it.
 
-The CSV importer identifies exact replays using a deterministic SHA-256 hash plus the source name and source record ID. Canonical vehicles are upserted by VIN with PostgreSQL `ON CONFLICT`, which allows the same vehicle to be represented by more than one source in later stages.
+The importers identify exact replays using a deterministic SHA-256 hash plus the source name and source record ID. Canonical vehicles are upserted by VIN with PostgreSQL `ON CONFLICT`, allowing one vehicle to be represented by multiple sources.
 
-The initial CSV adapter retains the latest accepted field values for a VIN. A later stage will add explicit source-priority rules for heterogeneous sources. Kafka is intentionally absent: direct bounded database transactions keep the first implementation reproducible and easy to inspect.
+Dealer CSV remains authoritative for established non-null canonical fields; marketplace data fills only canonical nulls. Kafka is intentionally absent: direct bounded database transactions keep the implementation reproducible and easy to inspect.
 
 ## Multi-source identity and conflicts
 
@@ -24,4 +24,4 @@ flowchart LR
   VIN --> O[Price observations]
 ```
 
-Indexes support VIN lookup, make/model/year filtering, source-run review, and price-observation queries. Query plans should be measured with `EXPLAIN ANALYZE` against representative data before performance claims are made.
+Indexes support VIN lookup, make/model/year filtering, source-run review, and price-observation queries. Measured `EXPLAIN ANALYZE` evidence also justified the composite latest-observation index; see the [performance report](PERFORMANCE_REPORT.md).

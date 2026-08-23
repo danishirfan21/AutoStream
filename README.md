@@ -1,13 +1,22 @@
 # AutoStream
 
-AutoStream is a vehicle-data ingestion and market-intelligence portfolio project. It normalizes heterogeneous vehicle feeds into a canonical PostgreSQL model while retaining source payloads and supporting idempotent imports.
+AutoStream is a vehicle-data ingestion and market-intelligence platform built with FastAPI, PostgreSQL, and React. It normalizes heterogeneous CSV and JSON feeds into canonical VIN-based vehicle records while preserving historical source provenance and market observations.
 
-## Verified locally
+The project demonstrates multi-source ingestion, idempotency, conflict handling, external NHTSA enrichment, PostgreSQL analytics, measured query optimization, and a lightweight dashboard.
 
-- Async FastAPI, SQLAlchemy 2.x, PostgreSQL, Alembic, and Docker Compose.
-- Canonical vehicles, ingestion runs/errors, source provenance, and historical price observations.
-- Deterministic CSV fixtures, validation, VIN normalization, and unit-tested parsing.
-- Health/readiness plus basic vehicle and ingestion-run APIs.
+**Stack:** Python · FastAPI · PostgreSQL · SQLAlchemy · Alembic · React · TypeScript · Vite · Docker Compose
+
+## What is verified
+
+- Multi-source CSV and JSON ingestion with VIN normalization and canonical deduplication.
+- Historical source provenance and price/mileage/location observations.
+- Exact replay idempotency and deterministic cross-source conflict handling.
+- NHTSA enrichment with replay-safe persistence.
+- PostgreSQL-backed market summary and vehicle market snapshots.
+- React/TypeScript dashboard backed by the real API.
+- Docker Compose and GitHub Codespaces reproducibility.
+- Backend integration tests and frontend build/component tests.
+- Synthetic-scale PostgreSQL performance measurements with `EXPLAIN ANALYZE`.
 
 ## Dashboard
 
@@ -51,7 +60,7 @@ flowchart LR
   API --> UI[React dashboard]
 ```
 
-See [architecture notes](docs/ARCHITECTURE.md). Verified behavior will be documented only after the Compose workflow is run successfully.
+See [architecture notes](docs/ARCHITECTURE.md), the [verification report](docs/VERIFICATION_REPORT.md), and the [performance report](docs/PERFORMANCE_REPORT.md) for implementation and measurement details.
 
 ## Measured performance
 
@@ -66,6 +75,7 @@ The dashboard is a small portfolio interface over the real API. Screenshots rema
 ```bash
 ./scripts/verify_codespaces.sh
 ./scripts/verify_frontend.sh
+./scripts/verify_performance.sh
 ```
 
-The first verifies the backend's deterministic intelligence workflow. The second performs a clean frontend dependency install, type-checked build, unit tests, frontend image build, and Compose HTTP shell check.
+These verify the deterministic backend workflow, the frontend build/test/Compose workflow, and opt-in synthetic PostgreSQL benchmark generation and query-plan capture.
