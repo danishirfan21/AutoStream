@@ -7,4 +7,5 @@ COPY backend/alembic ./alembic
 COPY backend/tests ./tests
 COPY backend/alembic.ini backend/pytest.ini ./
 COPY fixtures ./fixtures
+COPY scripts ./scripts
 EXPOSE 8000
