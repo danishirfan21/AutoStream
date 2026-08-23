@@ -1,5 +1,5 @@
 """Generate deterministic synthetic benchmark data directly in PostgreSQL."""
-import argparse, asyncio, os, random, time, uuid
+import argparse, asyncio, json, os, random, time, uuid
 from datetime import datetime, timedelta, timezone
 import asyncpg
 
@@ -24,7 +24,7 @@ async def main() -> None:
             vin = f"B{i:016d}"[-17:]; vehicles.append((vehicle_id, vin, 2012 + i % 14, make, model, "Synthetic"))
             for version in range(1 + (i % 3)):
                 source = SOURCES[version % len(SOURCES)]; stamp = now - timedelta(days=version * 30)
-                sources.append((uuid.uuid5(NAMESPACE, f"source-{i}-{version}"), vehicle_id, source, f"{source}-{i}-{version}", {"synthetic": True, "version": version}, stamp, stamp, f"{i:064x}"))
+                sources.append((uuid.uuid5(NAMESPACE, f"source-{i}-{version}"), vehicle_id, source, f"{source}-{i}-{version}", json.dumps({"synthetic": True, "version": version}), stamp, stamp, f"{i:064x}"))
             for n in range(1 + (i % 12)):
                 observed = now - timedelta(days=90 - n * 7, minutes=i % 60)
                 observations.append((uuid.uuid5(NAMESPACE, f"observation-{i}-{n}"), vehicle_id, SOURCES[n % len(SOURCES)], 18000 + (i % 20000) + n * 25, 5000 + (i * 17 + n * 100) % 150000, LOCATIONS[i % len(LOCATIONS)], observed))
