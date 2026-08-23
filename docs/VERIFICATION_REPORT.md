@@ -1,5 +1,9 @@
 # Verification report
 
+## Dashboard hardening
+
+The dashboard now has a typed React/Vite API client, component-level loading/error/empty states, readable NHTSA attributes, and focused Vitest/React Testing Library coverage. Frontend generated artifacts are ignored and removed from Git tracking; `package-lock.json` remains tracked. Local clean dependency installation, type-checked production build, and frontend unit tests are being run as part of this change. Compose and Codespaces verification results are recorded only after those Docker-backed checks complete.
+
 ## Commands actually run in this environment
 
 ```text

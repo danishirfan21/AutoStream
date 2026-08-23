@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +14,13 @@ from app.models import IngestionError, IngestionRun, Vehicle, VehicleEnrichment,
 from app.schemas import EnrichmentOut, ErrorOut, PriceObservationOut, RunOut, SourceRecordOut, VehicleOut
 
 app = FastAPI(title="AutoStream", version="0.1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
 FIXTURES = get_fixtures_dir()
 
 
