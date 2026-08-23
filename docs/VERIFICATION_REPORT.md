@@ -2,7 +2,21 @@
 
 ## Dashboard hardening
 
-The dashboard now has a typed React/Vite API client, component-level loading/error/empty states, readable NHTSA attributes, and focused Vitest/React Testing Library coverage. Frontend generated artifacts are ignored and removed from Git tracking; `package-lock.json` remains tracked. Local clean dependency installation, type-checked production build, and frontend unit tests are being run as part of this change. Compose and Codespaces verification results are recorded only after those Docker-backed checks complete.
+The dashboard now has a typed React/Vite API client, component-level loading/error/empty states, readable NHTSA attributes, and focused Vitest/React Testing Library coverage. Frontend generated artifacts are ignored and removed from Git tracking; `package-lock.json` remains tracked.
+
+The fresh GitHub Codespaces run completed clean `npm ci`, type-checked production build, and five frontend tests before building the frontend image and starting the real Compose stack. It reached:
+
+```text
+AUTOSTREAM FRONTEND VERIFY SUCCEEDED:
+dependencies
+typescript
+build
+tests
+docker
+dashboard
+```
+
+The same Codespaces environment then completed the backend intelligence verifier with `10 passed, 1 warning` and reached `AUTOSTREAM INTELLIGENCE VERIFY SUCCEEDED` (including PostgreSQL, migrations, CSV/JSON ingestion, NHTSA enrichment, analytics, persistence, and tests).
 
 ## Commands actually run in this environment
 
