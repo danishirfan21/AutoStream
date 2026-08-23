@@ -1,0 +1,1 @@
+Nested loop: vehicles_vin_key then ix_vehicle_source_records_vehicle_id; actual rows=3; Execution Time: 0.078 ms.

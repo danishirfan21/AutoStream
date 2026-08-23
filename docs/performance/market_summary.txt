@@ -1,0 +1,1 @@
+Baseline: ix_vehicle_price_observations_vehicle_id plus incremental sort and Unique; 64,984 rows; Execution Time: 38.440 ms. Post-index: ix_observations_vehicle_latest and Unique; 64,984 rows; Execution Time: 15.600 ms.

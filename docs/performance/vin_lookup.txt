@@ -1,0 +1,1 @@
+Index Scan using vehicles_vin_key on vehicles; Index Cond: vin = synthetic VIN; Execution Time: 0.082 ms; Buffers: shared hit=3.

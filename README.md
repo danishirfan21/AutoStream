@@ -40,13 +40,26 @@ Invoke-RestMethod -Method Post 'http://localhost:8000/api/v1/ingestion/csv?fixtu
 
 ```mermaid
 flowchart LR
-  CSV[Dealer CSV] --> Adapter[CSV Adapter]
-  Adapter --> Normalize[Validation + normalization]
-  Normalize --> DB[(PostgreSQL)]
-  DB --> API[FastAPI]
+  CSV[CSV feed] --> Normalize[Validation + normalization]
+  JSON[JSON feed] --> Normalize
+  Normalize --> Vehicle[Canonical vehicle by VIN]
+  Vehicle --> DB[(PostgreSQL)]
+  DB --> Provenance[Source provenance]
+  DB --> Observations[Price observations]
+  DB --> Enrichment[NHTSA enrichment]
+  DB --> API[FastAPI analytics API]
+  API --> UI[React dashboard]
 ```
 
 See [architecture notes](docs/ARCHITECTURE.md). Verified behavior will be documented only after the Compose workflow is run successfully.
+
+## Measured performance
+
+On a deterministic 10,000-vehicle synthetic dataset in GitHub Codespaces (30 sequential localhost samples per endpoint), median VIN lookup was 2.683 ms and median market-summary latency was 29.377 ms. PostgreSQL plan evidence justified one composite latest-observation index; full methodology, plans, and limitations are in [the performance report](docs/PERFORMANCE_REPORT.md). This is not a production-scale or concurrency claim.
+
+## Portfolio notes
+
+The dashboard is a small portfolio interface over the real API. Screenshots remain pending rather than fabricated. Use the [demo script](docs/DEMO_SCRIPT.md) and [interview notes](docs/INTERVIEW_NOTES.md) for a concise walkthrough.
 
 ## Verification
 

@@ -1,0 +1,1 @@
+Baseline: vehicle-ID bitmap scan then top-N sort by observed_at DESC, id DESC; actual rows=9; Execution Time: 0.236 ms. The small per-VIN sort was not an optimization target.

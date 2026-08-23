@@ -1,0 +1,1 @@
+VIN index followed by vehicle-ID observation scan and quicksort; actual rows=9; Execution Time: 0.094 ms.
