@@ -4,6 +4,9 @@ cleanup() { docker compose down -v --remove-orphans >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 command -v docker >/dev/null || { echo "Docker is required for frontend verification."; exit 1; }
 command -v npm >/dev/null || { echo "npm is required for frontend verification."; exit 1; }
+if [[ ! -f .env ]]; then
+  cp .env.example .env
+fi
 pushd frontend >/dev/null
 npm ci
 npm run build
