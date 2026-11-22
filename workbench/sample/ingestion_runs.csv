@@ -1,0 +1,7 @@
+run_seq,source_name,status,total_records,inserted_records,updated_records,duplicate_records,invalid_records,failed_records,error_message
+1,dealer_csv,completed,3,3,0,0,0,0,
+2,dealer_csv,completed,3,0,0,3,0,0,
+3,dealer_csv,completed,4,1,2,1,0,0,
+4,dealer_csv,completed,2,0,0,0,2,0,
+5,marketplace_json,completed,4,1,2,0,1,0,
+6,marketplace_json,completed,4,0,0,3,1,0,
