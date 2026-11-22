@@ -1,0 +1,14 @@
+run_seq,run_source_name,occurrence_in_run,stored_source_record_id,error_type,error_message,raw_payload_json
+4,dealer_csv,1,1N4AL3AP9JC123456,InvalidOperation,[<class 'decimal.ConversionSyntax'>],"{""vin"": ""1N4AL3AP9JC123456"", ""make"": ""Nissan"", ""trim"": ""S"", ""year"": ""2018"", ""model"": ""Altima"", ""price"": ""not-a-price"", ""mileage"": ""45000"", ""location"": ""Dallas TX"", ""updated_at"": ""2026-01-10T10:00:00Z""}"
+4,dealer_csv,2,INVALIDVIN,ValidationError,"1 validation error for NormalizedVehicleRecord
+vin
+  Value error, VIN must be 17 characters and exclude I, O, and Q [type=value_error, input_value='INVALIDVIN', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.10/v/value_error","{""vin"": ""INVALIDVIN"", ""make"": ""Honda"", ""trim"": ""EX"", ""year"": ""2024"", ""model"": ""Civic"", ""price"": ""25000"", ""mileage"": ""1000"", ""location"": ""Austin TX"", ""updated_at"": ""2026-01-10T10:00:00Z""}"
+5,marketplace_json,1,row-4,ValidationError,"1 validation error for NormalizedVehicleRecord
+vin
+  Value error, VIN must be 17 characters and exclude I, O, and Q [type=value_error, input_value='BADVIN', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.10/v/value_error","{""brand"": ""Invalid"", ""market"": ""Nowhere"", ""updated"": ""2026-08-01T11:15:00Z"", ""variant"": ""Base"", ""listing_id"": ""mk-invalid"", ""model_year"": 2024, ""vehicle_vin"": ""BADVIN"", ""asking_price"": 10000, ""vehicle_model"": ""Example"", ""odometer_miles"": 100}"
+6,marketplace_json,1,row-4,ValidationError,"1 validation error for NormalizedVehicleRecord
+vin
+  Value error, VIN must be 17 characters and exclude I, O, and Q [type=value_error, input_value='BADVIN', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.10/v/value_error","{""brand"": ""Invalid"", ""market"": ""Nowhere"", ""updated"": ""2026-08-01T11:15:00Z"", ""variant"": ""Base"", ""listing_id"": ""mk-invalid"", ""model_year"": 2024, ""vehicle_vin"": ""BADVIN"", ""asking_price"": 10000, ""vehicle_model"": ""Example"", ""odometer_miles"": 100}"
